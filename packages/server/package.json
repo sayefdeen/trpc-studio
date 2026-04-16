@@ -1,13 +1,13 @@
 {
   "name": "@srawad/trpc-studio",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "MIT",
   "description": "Swagger-like UI for tRPC with automatic output type extraction",
   "repository": {
     "type": "git",
     "url": "https://github.com/sayefdeen/trpc-studio"
   },
-  "homepage": "https://trpc-studio-nextjs.vercel.app",
+  "homepage": "https://github.com/sayefdeen/trpc-studio#readme",
   "author": "Saif Alrawad",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node scripts/embed-ui.js && tsup",
+    "build": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
