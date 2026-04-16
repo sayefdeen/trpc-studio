@@ -113,6 +113,30 @@ describe("introspectRouter", () => {
     expect(manifest.procedures[0]?.inputSchema).toBeNull();
   });
 
+  it("extracts output schema when .output() is used", () => {
+    const router = t.router({
+      getUser: t.procedure
+        .input(z.object({ id: z.string() }))
+        .output(z.object({ id: z.string(), name: z.string(), email: z.string() }))
+        .query(({ input }) => ({ id: input.id, name: "John", email: "john@example.com" })),
+    });
+    const manifest = introspectRouter(router);
+    const proc = manifest.procedures[0];
+    expect(proc?.outputSchema).toBeDefined();
+    expect(proc?.outputSchema?.type).toBe("object");
+    expect(proc?.outputSchema?.properties).toHaveProperty("id");
+    expect(proc?.outputSchema?.properties).toHaveProperty("name");
+    expect(proc?.outputSchema?.properties).toHaveProperty("email");
+  });
+
+  it("returns null outputSchema when .output() is not used", () => {
+    const router = t.router({
+      hello: t.procedure.query(() => "hello"),
+    });
+    const manifest = introspectRouter(router);
+    expect(manifest.procedures[0]?.outputSchema).toBeNull();
+  });
+
   it("handles chained .input().input()", () => {
     const router = t.router({
       test: t.procedure

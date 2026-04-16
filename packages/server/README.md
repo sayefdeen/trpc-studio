@@ -1,7 +1,8 @@
 # trpc-studio
 
-A Swagger-like developer UI for [tRPC](https://trpc.io) APIs with automatic
-output type extraction.
+A Swagger-like developer UI for [tRPC](https://trpc.io) APIs — auto-generated
+input forms, "Try It Out" execution, output type visualization, and a CLI for
+static type extraction via the TypeScript Compiler API.
 
 <!-- add screenshot here -->
 
@@ -11,8 +12,8 @@ output type extraction.
   enum, object, array
 - **"Try It Out"** — execute real tRPC calls from the browser with response
   display, timing, and status
-- **Output type visualization** — extract response types at build time using the
-  TypeScript Compiler API and display them as a collapsible schema tree
+- **Output type visualization** — automatic runtime detection from `.output()`
+  schemas, or static extraction via the CLI using the TypeScript Compiler API
 - **Sidebar navigation** — procedures grouped by router, color-coded badges
   (query/mutation/subscription), real-time search
 - **Self-contained** — served as a single HTML response, no static file hosting
@@ -78,19 +79,45 @@ export async function GET() {
 }
 ```
 
-## CLI: Output Type Extraction
+## Output Type Visualization
 
-By default, trpc-studio shows input schemas (from Zod) but not output types. To
-enable the **Response Schema** section, run the CLI extractor:
+trpc-studio shows output (response) schemas in two ways — **runtime** and
+**static extraction**. You can use either or both.
 
-```bash
-npx @srawad/trpc-studio extract \
-  --router ./src/router.ts \
-  --tsconfig ./tsconfig.json \
-  --out .trpc-studio.json
+### Option A: Runtime (automatic, zero config)
+
+If your procedures use `.output()` with a Zod schema, trpc-studio picks it up
+automatically at runtime — no extra setup needed:
+
+```typescript
+// This procedure's output schema is detected automatically
+const appRouter = t.router({
+  getUser: t.procedure
+    .input(z.object({ id: z.string() }))
+    .output(z.object({ id: z.string(), name: z.string(), email: z.string() }))
+    .query(({ input }) => {
+      return db.user.findUnique({ where: { id: input.id } });
+    }),
+});
 ```
 
-Then load the generated file in your server:
+### Option B: CLI Extractor (for procedures without `.output()`)
+
+Most tRPC procedures don't use `.output()` — they just return a value and let
+TypeScript infer the type. For these, trpc-studio provides a CLI tool that uses
+the **TypeScript Compiler API** to statically analyze your router source code and
+extract the return types.
+
+#### Step 1: Run the extractor
+
+```bash
+npx @srawad/trpc-studio extract --router ./src/server/router.ts
+```
+
+This analyzes your TypeScript source and generates a `.trpc-studio.json` file
+with JSON Schema definitions for every procedure's output type.
+
+#### Step 2: Pass the schemas to renderTrpcStudio
 
 ```typescript
 import outputSchemas from "./.trpc-studio.json";
@@ -105,6 +132,111 @@ app.get("/studio", (_req, res) => {
 });
 ```
 
+#### Full Example
+
+Given this router:
+
+```typescript
+// src/server/router.ts
+import { initTRPC } from "@trpc/server";
+import { z } from "zod";
+
+const t = initTRPC.create();
+
+export const appRouter = t.router({
+  hello: t.procedure
+    .input(z.object({ name: z.string().optional() }))
+    .query(({ input }) => {
+      return { greeting: `Hello ${input.name ?? "world"}!` };
+    }),
+
+  user: t.router({
+    getById: t.procedure
+      .input(z.object({ id: z.string() }))
+      .query(({ input }) => {
+        return { id: input.id, name: "John Doe", email: "john@example.com" };
+      }),
+
+    create: t.procedure
+      .input(z.object({ name: z.string(), email: z.string() }))
+      .mutation(({ input }) => {
+        return { id: "new-id", ...input, createdAt: new Date().toISOString() };
+      }),
+  }),
+});
+```
+
+Run the extractor:
+
+```bash
+npx @srawad/trpc-studio extract \
+  --router ./src/server/router.ts \
+  --tsconfig ./tsconfig.json \
+  --name appRouter \
+  --out .trpc-studio.json
+```
+
+This generates `.trpc-studio.json`:
+
+```json
+{
+  "hello": {
+    "type": "object",
+    "properties": {
+      "greeting": { "type": "string" }
+    },
+    "required": ["greeting"]
+  },
+  "user.getById": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string" },
+      "email": { "type": "string" }
+    },
+    "required": ["id", "name", "email"]
+  },
+  "user.create": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string" },
+      "email": { "type": "string" },
+      "createdAt": { "type": "string" }
+    },
+    "required": ["id", "name", "email", "createdAt"]
+  }
+}
+```
+
+Then wire it up:
+
+```typescript
+import outputSchemas from "./.trpc-studio.json";
+
+app.get("/studio", (_req, res) => {
+  res.send(
+    renderTrpcStudio(appRouter, {
+      url: "http://localhost:3000/trpc",
+      outputSchemas,
+      meta: { title: "My API", version: "1.0.0" },
+    }),
+  );
+});
+```
+
+> **Tip:** Add `.trpc-studio.json` to your `.gitignore` and run the extractor as
+> part of your dev/build script:
+>
+> ```json
+> {
+>   "scripts": {
+>     "dev": "npx @srawad/trpc-studio extract --router ./src/server/router.ts && next dev",
+>     "studio:extract": "npx @srawad/trpc-studio extract --router ./src/server/router.ts"
+>   }
+> }
+> ```
+
 ### CLI Options
 
 | Option              | Default             | Description                           |
@@ -113,6 +245,7 @@ app.get("/studio", (_req, res) => {
 | `--out <path>`      | `.trpc-studio.json` | Output file path                      |
 | `--tsconfig <path>` | `./tsconfig.json`   | Path to tsconfig.json                 |
 | `--name <name>`     | `appRouter`         | Name of the exported router variable  |
+| `--help`            |                     | Show help message                     |
 
 ## API
 

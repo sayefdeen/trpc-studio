@@ -63,6 +63,10 @@ function extractProcedureFromDef(def: any, path: string, procedures: ProcedureIn
   const mergedInput = mergeZodInputs(inputs);
   const inputSchema = zodInputToJsonSchema(mergedInput);
 
+  // Extract output schema if .output() was used with a Zod validator
+  const outputZod = def.output;
+  const outputSchema = isZodType(outputZod) ? zodInputToJsonSchema(outputZod) : null;
+
   // Extract description from meta
   const description = def.meta?.description as string | undefined;
 
@@ -70,7 +74,7 @@ function extractProcedureFromDef(def: any, path: string, procedures: ProcedureIn
     path,
     type,
     inputSchema,
-    outputSchema: null,
+    outputSchema,
     ...(description !== undefined ? { description } : {}),
   });
 }

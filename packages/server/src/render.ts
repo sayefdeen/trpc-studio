@@ -1,8 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { introspectRouter } from "./introspect";
+import { UI_CSS, UI_JS } from "./ui-assets";
 
 import type { JsonSchema } from "@trpc-studio/core";
 
@@ -16,20 +13,6 @@ export interface RenderOptions {
     version?: string;
   };
   headers?: Record<string, string>;
-}
-
-function getDistDir(): string {
-  // Support both CJS (__dirname) and ESM (import.meta.url)
-  if (typeof __dirname !== "undefined") return __dirname;
-  return path.dirname(fileURLToPath(import.meta.url));
-}
-
-function tryReadFile(filePath: string): string | null {
-  try {
-    return fs.readFileSync(filePath, "utf-8");
-  } catch {
-    return null;
-  }
 }
 
 function escapeHtml(str: string): string {
@@ -78,41 +61,18 @@ export function renderTrpcStudio(router: any, options: RenderOptions): string {
   const safeOptions = safeInlineJson(optionsJson);
   const scriptTag = `<script>window.__TRPC_STUDIO_MANIFEST__=${safeManifest};window.__TRPC_STUDIO_OPTIONS__=${safeOptions};</script>`;
 
-  // Try to load and inline the built UI assets for a fully self-contained HTML
-  const distDir = getDistDir();
-  const uiDir = path.join(distDir, "ui", "assets");
-  const jsContent = tryReadFile(path.join(uiDir, "index.js"));
-  const cssContent = tryReadFile(path.join(uiDir, "index.css"));
-
-  if (jsContent) {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title}</title>
-  ${cssContent ? `<style>${cssContent}</style>` : ""}
-  ${scriptTag}
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module">${jsContent}</script>
-</body>
-</html>`;
-  }
-
-  // Fallback if UI hasn't been built yet
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
+  <style>${UI_CSS}</style>
   ${scriptTag}
 </head>
 <body>
   <div id="root"></div>
-  <pre style="font-family:monospace;padding:20px;">${manifestJson}</pre>
+  <script type="module">${UI_JS}</script>
 </body>
 </html>`;
 }

@@ -1,8 +1,8 @@
 {
   "name": "@srawad/trpc-studio",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "MIT",
-  "description": "Swagger-like UI for tRPC with automatic output type extraction",
+  "description": "Swagger-like UI for tRPC — auto-generated input forms, Try It Out execution, output type visualization, and a CLI for static type extraction",
   "repository": {
     "type": "git",
     "url": "https://github.com/sayefdeen/trpc-studio"
@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node scripts/embed-ui.mjs && tsup",
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -42,7 +42,9 @@
     "openapi",
     "ui",
     "devtools",
-    "typescript"
+    "typescript",
+    "cli",
+    "introspection"
   ],
   "peerDependencies": {
     "@trpc/server": ">=10.0.0",
