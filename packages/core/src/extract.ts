@@ -205,9 +205,17 @@ function walkRouterType(type: Type, prefix: string, result: Record<string, JsonS
       continue;
     }
 
-    // This is a procedure — extract _def._output_out
+    // This is a procedure — extract output type
+    // v10: _def._output_out
+    // v11: _def.$types.output
     if (propDefType) {
-      const outputType = getPropertyType(propDefType, "_output_out");
+      let outputType = getPropertyType(propDefType, "_output_out");
+      if (!outputType) {
+        const $types = getPropertyType(propDefType, "$types");
+        if ($types) {
+          outputType = getPropertyType($types, "output");
+        }
+      }
       if (outputType) {
         const schema = typeToJsonSchema(outputType);
         result[path] = schema;
