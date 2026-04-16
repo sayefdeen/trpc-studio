@@ -27,5 +27,23 @@
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=10.0.0"
-  }
+  },
+  "version": "1.0.0",
+  "description": "A Swagger-like developer UI for [tRPC](https://trpc.io) APIs with automatic output type extraction.",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sayefdeen/trpc-studio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sayefdeen/trpc-studio/issues"
+  },
+  "homepage": "https://github.com/sayefdeen/trpc-studio#readme"
 }

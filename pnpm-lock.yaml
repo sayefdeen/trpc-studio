@@ -110,13 +110,13 @@ importers:
 
   packages/server:
     dependencies:
-      '@trpc-studio/core':
-        specifier: workspace:*
-        version: link:../core
       zod-to-json-schema:
         specifier: ^3.22.0
         version: 3.25.2(zod@3.25.76)
     devDependencies:
+      '@trpc-studio/core':
+        specifier: workspace:*
+        version: link:../core
       '@trpc-studio/ui':
         specifier: workspace:*
         version: link:../ui

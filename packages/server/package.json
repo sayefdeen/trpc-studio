@@ -1,6 +1,6 @@
 {
   "name": "@srawad/trpc-studio",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Swagger-like UI for tRPC with automatic output type extraction",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -47,10 +47,10 @@
     }
   },
   "dependencies": {
-    "@trpc-studio/core": "workspace:*",
     "zod-to-json-schema": "^3.22.0"
   },
   "devDependencies": {
+    "@trpc-studio/core": "workspace:*",
     "@trpc-studio/ui": "workspace:*",
     "@trpc/server": "^10.45.0",
     "@types/node": "^20.0.0",

@@ -11,6 +11,7 @@ export default defineConfig([
     treeshake: true,
     minify: false,
     external: ["@trpc/server", "zod"],
+    noExternal: ["@trpc-studio/core"],
   },
   {
     entry: ["src/cli.ts"],
