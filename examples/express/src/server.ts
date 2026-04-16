@@ -3,7 +3,7 @@ import path from "node:path";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
 import express from "express";
-import { renderTrpcStudio } from "trpc-studio";
+import { renderTrpcStudio } from "@srawad/trpc-studio";
 
 import { appRouter } from "./router";
 

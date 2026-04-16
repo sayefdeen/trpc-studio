@@ -22,7 +22,7 @@ output type extraction.
 ## Installation
 
 ```bash
-npm install -D trpc-studio
+npm install -D @srawad/trpc-studio
 ```
 
 ## Quick Start
@@ -32,7 +32,7 @@ npm install -D trpc-studio
 ```typescript
 import express from "express";
 import * as trpcExpress from "@trpc/server/adapters/express";
-import { renderTrpcStudio } from "trpc-studio";
+import { renderTrpcStudio } from "@srawad/trpc-studio";
 import { appRouter } from "./router";
 
 const app = express();
@@ -65,7 +65,7 @@ export async function GET() {
     return new NextResponse("Not Found", { status: 404 });
   }
 
-  const { renderTrpcStudio } = await import("trpc-studio");
+  const { renderTrpcStudio } = await import("@srawad/trpc-studio");
 
   return new NextResponse(
     renderTrpcStudio(appRouter, {
@@ -84,7 +84,7 @@ By default, trpc-studio shows input schemas (from Zod) but not output types. To
 enable the **Response Schema** section, run the CLI extractor:
 
 ```bash
-npx trpc-studio extract \
+npx @srawad/trpc-studio extract \
   --router ./src/router.ts \
   --tsconfig ./tsconfig.json \
   --out .trpc-studio.json

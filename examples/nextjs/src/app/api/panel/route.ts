@@ -7,7 +7,7 @@ export async function GET() {
     return new NextResponse("Not Found", { status: 404 });
   }
 
-  const { renderTrpcStudio } = await import("trpc-studio");
+  const { renderTrpcStudio } = await import("@srawad/trpc-studio");
 
   return new NextResponse(
     renderTrpcStudio(appRouter, {
