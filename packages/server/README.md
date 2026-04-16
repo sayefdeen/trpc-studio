@@ -105,8 +105,8 @@ const appRouter = t.router({
 
 Most tRPC procedures don't use `.output()` — they just return a value and let
 TypeScript infer the type. For these, trpc-studio provides a CLI tool that uses
-the **TypeScript Compiler API** to statically analyze your router source code and
-extract the return types.
+the **TypeScript Compiler API** to statically analyze your router source code
+and extract the return types.
 
 #### Step 1: Run the extractor
 
