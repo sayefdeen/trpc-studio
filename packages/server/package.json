@@ -1,6 +1,6 @@
 {
   "name": "@srawad/trpc-studio",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Swagger-like UI for tRPC with automatic output type extraction",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
