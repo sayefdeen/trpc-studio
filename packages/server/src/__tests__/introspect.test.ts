@@ -137,4 +137,118 @@ describe("introspectRouter", () => {
     const manifest = introspectRouter({ foo: "bar" });
     expect(manifest.procedures).toEqual([]);
   });
+
+  // tRPC v11 compatibility tests — simulate v11 internal structure
+  describe("tRPC v11 compatibility", () => {
+    it("extracts procedures that are plain functions in record (v11 style)", () => {
+      // In v11, leaf procedures inside a sub-router's record are plain functions
+      const mockRouter = {
+        _def: {
+          record: {
+            hello: Object.assign(() => "hello", {
+              _def: { type: "query", inputs: [] },
+            }),
+          },
+        },
+      };
+      const manifest = introspectRouter(mockRouter);
+      expect(manifest.procedures).toHaveLength(1);
+      expect(manifest.procedures[0]).toMatchObject({
+        path: "hello",
+        type: "query",
+        inputSchema: null,
+      });
+    });
+
+    it("extracts nested v11 routers with function procedures", () => {
+      const mockRouter = {
+        _def: {
+          record: {
+            user: {
+              _def: {
+                record: {
+                  getById: Object.assign(() => null, {
+                    _def: { type: "query", inputs: [] },
+                  }),
+                  create: Object.assign(() => null, {
+                    _def: { type: "mutation", inputs: [] },
+                  }),
+                },
+              },
+            },
+          },
+        },
+      };
+      const manifest = introspectRouter(mockRouter);
+      expect(manifest.procedures).toHaveLength(2);
+      expect(manifest.procedures.map((p) => p.path)).toEqual(["user.getById", "user.create"]);
+      expect(manifest.procedures[0]?.type).toBe("query");
+      expect(manifest.procedures[1]?.type).toBe("mutation");
+    });
+
+    it("handles opaque function procedures with no _def", () => {
+      // Worst case: procedure is a plain function with no metadata at all
+      const mockRouter = {
+        _def: {
+          record: {
+            accounts: {
+              _def: {
+                record: {
+                  get: () => null,
+                  list: () => null,
+                },
+              },
+            },
+          },
+        },
+      };
+      const manifest = introspectRouter(mockRouter);
+      expect(manifest.procedures).toHaveLength(2);
+      expect(manifest.procedures.map((p) => p.path)).toEqual(["accounts.get", "accounts.list"]);
+      // Defaults to query when type is unknown
+      expect(manifest.procedures[0]?.type).toBe("query");
+    });
+
+    it("falls back to flat procedures map when record walk finds nothing", () => {
+      // Simulate a router where record is empty but procedures flat map exists
+      const mockRouter = {
+        _def: {
+          record: {},
+          procedures: {
+            "accounts.get": Object.assign(() => null, {
+              _def: { type: "query", inputs: [] },
+            }),
+            "accounts.create": Object.assign(() => null, {
+              _def: { type: "mutation", inputs: [] },
+            }),
+          },
+        },
+      };
+      const manifest = introspectRouter(mockRouter);
+      expect(manifest.procedures).toHaveLength(2);
+      expect(manifest.procedures.map((p) => p.path)).toEqual(["accounts.get", "accounts.create"]);
+      expect(manifest.procedures[0]?.type).toBe("query");
+      expect(manifest.procedures[1]?.type).toBe("mutation");
+    });
+
+    it("handles v11 function procedures with Zod input", () => {
+      const mockRouter = {
+        _def: {
+          record: {
+            getUser: Object.assign(() => null, {
+              _def: {
+                type: "query",
+                inputs: [z.object({ id: z.string() })],
+              },
+            }),
+          },
+        },
+      };
+      const manifest = introspectRouter(mockRouter);
+      expect(manifest.procedures).toHaveLength(1);
+      expect(manifest.procedures[0]?.inputSchema).toBeDefined();
+      expect(manifest.procedures[0]?.inputSchema?.type).toBe("object");
+      expect(manifest.procedures[0]?.inputSchema?.properties).toHaveProperty("id");
+    });
+  });
 });

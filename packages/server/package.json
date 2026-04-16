@@ -1,6 +1,6 @@
 {
   "name": "@srawad/trpc-studio",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "license": "MIT",
   "description": "Swagger-like UI for tRPC with automatic output type extraction",
   "repository": {

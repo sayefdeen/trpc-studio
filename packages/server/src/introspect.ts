@@ -44,6 +44,37 @@ function mergeZodInputs(inputs: any[]): any {
   return merged;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractProcedureFromDef(def: any, path: string, procedures: ProcedureInfo[]): void {
+  // Determine type from tRPC v10/v11
+  let type: ProcedureType = "query";
+  if (typeof def.type === "string") {
+    type = def.type as ProcedureType;
+  } else if (def.query) {
+    type = "query";
+  } else if (def.mutation) {
+    type = "mutation";
+  } else if (def.subscription) {
+    type = "subscription";
+  }
+
+  // Extract inputs
+  const inputs = def.inputs ?? [];
+  const mergedInput = mergeZodInputs(inputs);
+  const inputSchema = zodInputToJsonSchema(mergedInput);
+
+  // Extract description from meta
+  const description = def.meta?.description as string | undefined;
+
+  procedures.push({
+    path,
+    type,
+    inputSchema,
+    outputSchema: null,
+    ...(description !== undefined ? { description } : {}),
+  });
+}
+
 function walkRouter(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   routerDef: any,
@@ -63,41 +94,38 @@ function walkRouter(
 
     const def = value?._def;
 
-    if (!def) continue;
-
-    // Check if this is a router (has record/procedures/router property)
-    if (def.record ?? def.procedures ?? def.router) {
-      walkRouter(def.record ?? def.procedures ?? def.router, path, procedures);
+    // Case 1: Sub-router — has _def with nested record/procedures/router
+    if (def && (def.record ?? def.procedures ?? def.router)) {
+      walkRouter(def, path, procedures);
       continue;
     }
 
-    // This is a procedure — determine type from tRPC v10/v11
-    let type: ProcedureType = "query";
-    if (typeof def.type === "string") {
-      type = def.type as ProcedureType;
-    } else if (def.query) {
-      type = "query";
-    } else if (def.mutation) {
-      type = "mutation";
-    } else if (def.subscription) {
-      type = "subscription";
+    // Case 2: tRPC v10 procedure — has _def with type/inputs
+    if (def) {
+      extractProcedureFromDef(def, path, procedures);
+      continue;
     }
 
-    // Extract inputs
-    const inputs = def.inputs ?? [];
-    const mergedInput = mergeZodInputs(inputs);
-    const inputSchema = zodInputToJsonSchema(mergedInput);
+    // Case 3: tRPC v11 procedure — plain function, may have _def attached
+    if (typeof value === "function") {
+      if (value._def) {
+        extractProcedureFromDef(value._def, path, procedures);
+      } else {
+        // Opaque function with no metadata — register with defaults
+        procedures.push({
+          path,
+          type: "query",
+          inputSchema: null,
+          outputSchema: null,
+        });
+      }
+      continue;
+    }
 
-    // Extract description from meta
-    const description = def.meta?.description as string | undefined;
-
-    procedures.push({
-      path,
-      type,
-      inputSchema,
-      outputSchema: null,
-      ...(description !== undefined ? { description } : {}),
-    });
+    // Case 4: Plain object grouping (namespace without _def) — recurse
+    if (typeof value === "object" && value !== null) {
+      walkRouter(value, path, procedures);
+    }
   }
 }
 
@@ -111,6 +139,23 @@ export function introspectRouter(router: any): RouterManifest {
   }
 
   walkRouter(def, "", procedures);
+
+  // Fallback: if walking the record tree found nothing, try the flat procedures map (tRPC v11)
+  if (procedures.length === 0 && def.procedures && typeof def.procedures === "object") {
+    for (const [procPath, proc] of Object.entries(def.procedures)) {
+      const procDef = (proc as { _def?: unknown })?._def;
+      if (procDef && typeof procDef === "object") {
+        extractProcedureFromDef(procDef, procPath, procedures);
+      } else {
+        procedures.push({
+          path: procPath,
+          type: "query",
+          inputSchema: null,
+          outputSchema: null,
+        });
+      }
+    }
+  }
 
   return { procedures };
 }
