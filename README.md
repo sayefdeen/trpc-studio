@@ -3,7 +3,7 @@
 A Swagger-like developer UI for [tRPC](https://trpc.io) APIs with automatic
 output type extraction.
 
-<!-- add screenshot here -->
+<img width="1676" height="939" alt="Screenshot 2026-04-16 at 3 54 50 AM" src="https://github.com/user-attachments/assets/bc88fa79-94be-4c49-aa39-e38a97738972" />
 
 ## Features
 
