@@ -1,13 +1,13 @@
 {
   "name": "@srawad/trpc-studio",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "description": "Swagger-like UI for tRPC with automatic output type extraction",
   "repository": {
     "type": "git",
     "url": "https://github.com/sayefdeen/trpc-studio"
   },
-  "homepage": "https://github.com/sayefdeen/trpc-studio#readme",
+  "homepage": "https://trpc-studio-nextjs.vercel.app",
   "author": "Saif Alrawad",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
