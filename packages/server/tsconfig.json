@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "lib": ["ES2020"],
+    "types": ["node"],
+    "paths": {
+      "@trpc-studio/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

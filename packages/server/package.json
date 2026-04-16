@@ -1,0 +1,61 @@
+{
+  "name": "trpc-studio",
+  "version": "0.1.0",
+  "description": "Swagger-like UI for tRPC with automatic output type extraction",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "trpc-studio": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "trpc",
+    "swagger",
+    "openapi",
+    "ui",
+    "devtools",
+    "typescript"
+  ],
+  "peerDependencies": {
+    "@trpc/server": ">=10.0.0",
+    "zod": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": false
+    }
+  },
+  "dependencies": {
+    "@trpc-studio/core": "workspace:*",
+    "zod-to-json-schema": "^3.22.0"
+  },
+  "devDependencies": {
+    "@trpc-studio/ui": "workspace:*",
+    "@trpc/server": "^10.45.0",
+    "@types/node": "^20.0.0",
+    "vitest": "^1.4.0",
+    "tsup": "^8.0.0",
+    "zod": "^3.22.0"
+  }
+}

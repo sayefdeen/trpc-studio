@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "paths": {
+      "@trpc-studio/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
