@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node scripts/embed-ui.js && tsup",
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",

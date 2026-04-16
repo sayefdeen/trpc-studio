@@ -11,4 +11,5 @@ coverage
 *.log
 .next
 .trpc-studio.json
+packages/server/src/ui-assets.ts
 plan.md

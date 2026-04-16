@@ -1,8 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["@srawad/trpc-studio"],
-  },
-};
+const nextConfig = {};
 
 module.exports = nextConfig;
