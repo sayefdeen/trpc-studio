@@ -181,14 +181,37 @@ export function extractRouterOutputSchemas(options: ExtractOptions): Record<stri
   return result;
 }
 
-function walkRouterType(type: Type, prefix: string, result: Record<string, JsonSchema>): void {
-  // Get _def.record
+function extractProcedureOutputType(propDefType: Type): Type | null {
+  // v10: _def._output_out
+  const v10Output = getPropertyType(propDefType, "_output_out");
+  if (v10Output) return v10Output;
+
+  // v11: _def.$types.output
+  const $types = getPropertyType(propDefType, "$types");
+  if ($types) {
+    return getPropertyType($types, "output");
+  }
+
+  return null;
+}
+
+function isProcedureType(type: Type): boolean {
   const defType = getPropertyType(type, "_def");
-  if (!defType) return;
+  if (!defType) return false;
+  // v10: has _output_out or type field
+  // v11: has $types or procedure: true
+  return (
+    getPropertyType(defType, "_output_out") !== null ||
+    getPropertyType(defType, "$types") !== null ||
+    getPropertyType(defType, "type") !== null
+  );
+}
 
-  const recordType = getPropertyType(defType, "record");
-  if (!recordType) return;
-
+function walkRecordEntries(
+  recordType: Type,
+  prefix: string,
+  result: Record<string, JsonSchema>,
+): void {
   for (const prop of recordType.getProperties()) {
     const propName = prop.getName();
     const path = prefix ? `${prefix}.${propName}` : propName;
@@ -197,29 +220,47 @@ function walkRouterType(type: Type, prefix: string, result: Record<string, JsonS
     if (!propDecl) continue;
     const propType = prop.getTypeAtLocation(propDecl);
 
-    // Check if this is a nested router or a procedure
+    // Check if this is a nested router (v10 style — has _def with record)
     const propDefType = getPropertyType(propType, "_def");
     if (propDefType && isRouterDef(propDefType)) {
-      // Nested router — recurse
       walkRouterType(propType, path, result);
       continue;
     }
 
-    // This is a procedure — extract output type
-    // v10: _def._output_out
-    // v11: _def.$types.output
+    // Check if this is a procedure (has _def with output type info)
     if (propDefType) {
-      let outputType = getPropertyType(propDefType, "_output_out");
-      if (!outputType) {
-        const $types = getPropertyType(propDefType, "$types");
-        if ($types) {
-          outputType = getPropertyType($types, "output");
-        }
-      }
+      const outputType = extractProcedureOutputType(propDefType);
       if (outputType) {
-        const schema = typeToJsonSchema(outputType);
-        result[path] = schema;
+        result[path] = typeToJsonSchema(outputType);
+      }
+      continue;
+    }
+
+    // v11: entry has no _def — it's a namespace object with procedures as direct properties
+    // Check if its children are procedures and recurse
+    const childProps = propType.getProperties();
+    const firstChild = childProps[0];
+    if (firstChild) {
+      const firstDecl = firstChild.getValueDeclaration() ?? firstChild.getDeclarations()[0];
+      if (firstDecl) {
+        const firstChildType = firstChild.getTypeAtLocation(firstDecl);
+        if (isProcedureType(firstChildType)) {
+          // This is a v11 namespace — recurse into its properties
+          walkRecordEntries(propType, path, result);
+          continue;
+        }
       }
     }
   }
+}
+
+function walkRouterType(type: Type, prefix: string, result: Record<string, JsonSchema>): void {
+  // Get _def.record
+  const defType = getPropertyType(type, "_def");
+  if (!defType) return;
+
+  const recordType = getPropertyType(defType, "record");
+  if (!recordType) return;
+
+  walkRecordEntries(recordType, prefix, result);
 }
