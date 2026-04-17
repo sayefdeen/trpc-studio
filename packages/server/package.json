@@ -38,13 +38,19 @@
   },
   "keywords": [
     "trpc",
+    "trpc-ui",
+    "trpc-panel",
+    "trpc-devtools",
+    "trpc-swagger",
     "swagger",
     "openapi",
-    "ui",
+    "api-explorer",
     "devtools",
     "typescript",
     "cli",
-    "introspection"
+    "introspection",
+    "zod",
+    "trpc-studio"
   ],
   "peerDependencies": {
     "@trpc/server": ">=10.0.0",
