@@ -17,6 +17,10 @@ interface SidebarProps {
   onSelect: (path: string) => void;
   onSearch: (query: string) => void;
   onToggleGroup: (group: string) => void;
+  allTags: string[];
+  selectedTags: Set<string>;
+  onToggleTag: (tag: string) => void;
+  onClearTags: () => void;
 }
 
 export function Sidebar({
@@ -27,15 +31,62 @@ export function Sidebar({
   onSelect,
   onSearch,
   onToggleGroup,
+  allTags,
+  selectedTags,
+  onToggleTag,
+  onClearTags,
 }: SidebarProps) {
+  const filteredGroups =
+    selectedTags.size === 0
+      ? groups
+      : groups
+          .map((group) => ({
+            ...group,
+            procedures: group.procedures.filter((proc) => {
+              const procTags = proc.meta?.tags;
+              if (!Array.isArray(procTags)) return false;
+              return Array.from(selectedTags).every((tag) => procTags.includes(tag));
+            }),
+          }))
+          .filter((group) => group.procedures.length > 0);
   return (
     <aside className="w-[280px] flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden">
       <div className="p-3 border-b border-gray-200">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Procedures</h2>
       </div>
       <SearchBar value={searchQuery} onChange={onSearch} />
+      {allTags.length > 0 && (
+        <div className="px-3 py-2 border-b border-gray-200">
+          <div className="flex flex-wrap gap-1">
+            {allTags.map((tag) => {
+              const isSelected = selectedTags.has(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => onToggleTag(tag)}
+                  className={`px-2 py-0.5 text-[10px] font-medium rounded-full border ${
+                    isSelected
+                      ? "bg-blue-100 border-blue-300 text-blue-800"
+                      : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+            {selectedTags.size > 0 && (
+              <button
+                onClick={onClearTags}
+                className="px-2 py-0.5 text-[10px] font-medium text-red-600 hover:text-red-800"
+              >
+                clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       <nav className="flex-1 overflow-y-auto">
-        {groups.map((group) => {
+        {filteredGroups.map((group) => {
           const isExpanded = expandedGroups.has(group.name);
           return (
             <div key={group.name}>
@@ -83,6 +134,28 @@ export function Sidebar({
                         >
                           {shortName}
                         </span>
+                        {proc.meta?.auth === true && (
+                          <span
+                            className="flex-shrink-0 text-[10px]"
+                            title="Requires authentication"
+                          >
+                            🔒
+                          </span>
+                        )}
+                        {proc.meta?.deprecated === true && (
+                          <span className="flex-shrink-0 text-[10px]" title="Deprecated">
+                            ⚠️
+                          </span>
+                        )}
+                        {Array.isArray(proc.meta?.tags) &&
+                          (proc.meta.tags as string[]).slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="flex-shrink-0 px-1 py-0 text-[9px] font-medium bg-gray-100 text-gray-500 rounded"
+                            >
+                              {tag}
+                            </span>
+                          ))}
                       </button>
                     );
                   })}
@@ -91,7 +164,7 @@ export function Sidebar({
             </div>
           );
         })}
-        {groups.length === 0 && (
+        {filteredGroups.length === 0 && (
           <p className="px-4 py-6 text-sm text-gray-400 text-center">No procedures found</p>
         )}
       </nav>

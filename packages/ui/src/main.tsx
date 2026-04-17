@@ -5,11 +5,18 @@ import "./index.css";
 
 import type { RouterManifest } from "@trpc-studio/core";
 
+interface AuthConfig {
+  type: "bearer" | "cookie" | "header" | "basic";
+  name?: string;
+  description?: string;
+}
+
 interface StudioOptions {
   url: string;
   transformer: "superjson" | "none";
   headers: Record<string, string>;
   version?: string;
+  auth?: AuthConfig[];
 }
 
 declare global {

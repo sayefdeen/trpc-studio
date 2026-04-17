@@ -15,7 +15,11 @@ static type extraction via the TypeScript Compiler API.
 - **Output type visualization** — automatic runtime detection from `.output()`
   schemas, or static extraction via the CLI using the TypeScript Compiler API
 - **Sidebar navigation** — procedures grouped by router, color-coded badges
-  (query/mutation/subscription), real-time search
+  (query/mutation/subscription), real-time search, tag filtering
+- **Authentication** — configurable "Authorize" button (bearer, cookie, header,
+  basic) with localStorage persistence
+- **Procedure metadata** — automatically displays `.meta()` values (auth,
+  deprecated, tags, custom fields)
 - **Self-contained** — served as a single HTML response, no static file hosting
   needed
 - **tRPC v10 & v11** compatible
@@ -115,18 +119,26 @@ npx @srawad/trpc-studio extract --router ./src/server/router.ts
 ```
 
 This analyzes your TypeScript source and generates a `.trpc-studio.json` file
-with JSON Schema definitions for every procedure's output type.
+with JSON Schema definitions for every procedure's input and output types.
+
+This is especially useful for:
+
+- **Output types** — procedures that don't use `.output()` (most tRPC code)
+- **Input types with `z.custom<T>()`** — Zod's `z.custom()` carries no runtime
+  schema, so the UI renders it as an empty object. The CLI extractor resolves
+  the actual TypeScript type and provides full structural info.
 
 #### Step 2: Pass the schemas to renderTrpcStudio
 
 ```typescript
-import outputSchemas from "./.trpc-studio.json";
+import schemas from "./.trpc-studio.json";
 
 app.get("/studio", (_req, res) => {
   res.send(
     renderTrpcStudio(appRouter, {
       url: "http://localhost:3000/trpc",
-      outputSchemas,
+      inputSchemas: schemas.inputs,
+      outputSchemas: schemas.outputs,
     }),
   );
 });
@@ -176,35 +188,60 @@ npx @srawad/trpc-studio extract \
   --out .trpc-studio.json
 ```
 
-This generates `.trpc-studio.json`:
+This generates `.trpc-studio.json` with both input and output schemas:
 
 ```json
 {
-  "hello": {
-    "type": "object",
-    "properties": {
-      "greeting": { "type": "string" }
+  "inputs": {
+    "hello": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
     },
-    "required": ["greeting"]
+    "user.getById": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "user.create": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["name", "email"]
+    }
   },
-  "user.getById": {
-    "type": "object",
-    "properties": {
-      "id": { "type": "string" },
-      "name": { "type": "string" },
-      "email": { "type": "string" }
+  "outputs": {
+    "hello": {
+      "type": "object",
+      "properties": {
+        "greeting": { "type": "string" }
+      },
+      "required": ["greeting"]
     },
-    "required": ["id", "name", "email"]
-  },
-  "user.create": {
-    "type": "object",
-    "properties": {
-      "id": { "type": "string" },
-      "name": { "type": "string" },
-      "email": { "type": "string" },
-      "createdAt": { "type": "string" }
+    "user.getById": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
     },
-    "required": ["id", "name", "email", "createdAt"]
+    "user.create": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "createdAt"]
+    }
   }
 }
 ```
@@ -212,13 +249,14 @@ This generates `.trpc-studio.json`:
 Then wire it up:
 
 ```typescript
-import outputSchemas from "./.trpc-studio.json";
+import schemas from "./.trpc-studio.json";
 
 app.get("/studio", (_req, res) => {
   res.send(
     renderTrpcStudio(appRouter, {
       url: "http://localhost:3000/trpc",
-      outputSchemas,
+      inputSchemas: schemas.inputs,
+      outputSchemas: schemas.outputs,
       meta: { title: "My API", version: "1.0.0" },
     }),
   );
@@ -247,6 +285,88 @@ app.get("/studio", (_req, res) => {
 | `--name <name>`     | `appRouter`         | Name of the exported router variable  |
 | `--help`            |                     | Show help message                     |
 
+## Procedure Metadata (.meta())
+
+trpc-studio automatically reads and displays tRPC's built-in `.meta()` on each
+procedure. No configuration needed — if your procedures have meta, it shows up.
+
+```typescript
+const t = initTRPC
+  .meta<{
+    auth?: boolean;
+    deprecated?: boolean;
+    rateLimit?: number;
+    tags?: string[];
+  }>()
+  .create();
+
+const protectedProcedure = t.procedure.meta({ auth: true }).use(authMiddleware);
+
+export const appRouter = t.router({
+  getUser: protectedProcedure
+    .meta({ tags: ["billing", "v2"] })
+    .input(z.object({ id: z.string() }))
+    .query(/* ... */),
+
+  legacyReport: t.procedure
+    .meta({ deprecated: true, auth: true, tags: ["reporting"] })
+    .query(/* ... */),
+});
+```
+
+**In the UI:**
+
+- **Sidebar** — 🔒 icon for `auth: true`, ⚠️ icon for `deprecated: true`, tag
+  badges next to procedure names
+- **Detail panel** — all meta keys rendered as badge pills below the procedure
+  header (e.g., `🔒 auth`, `⚠️ deprecated`, `rateLimit: 100`)
+- **Tag filtering** — if any procedures use `meta.tags`, a filter bar appears at
+  the top of the sidebar. Click tags to filter procedures across all routers.
+  Multi-select supported.
+
+The rendering is generic — trpc-studio doesn't interpret the meta values, it
+just displays whatever keys and values are present.
+
+## Authentication
+
+Configure authentication so the "Try It Out" feature can execute protected
+procedures. An "Authorize" button appears in the top bar — click it to enter
+credentials. Values are stored in localStorage and persist across page
+refreshes.
+
+```typescript
+renderTrpcStudio(appRouter, {
+  url: "/api/trpc",
+  auth: { type: "bearer", description: "JWT token from /api/auth/login" },
+});
+```
+
+Multiple auth methods:
+
+```typescript
+renderTrpcStudio(appRouter, {
+  url: "/api/trpc",
+  auth: [
+    { type: "bearer", description: "JWT token" },
+    {
+      type: "cookie",
+      name: "next-auth.session-token",
+      description: "NextAuth session",
+    },
+    { type: "header", name: "x-api-key", description: "API key" },
+  ],
+});
+```
+
+**Supported auth types:**
+
+| Type     | Header sent                     | Use case          |
+| -------- | ------------------------------- | ----------------- |
+| `bearer` | `Authorization: Bearer <value>` | JWT, OAuth tokens |
+| `basic`  | `Authorization: Basic <value>`  | Basic auth        |
+| `header` | `<name>: <value>`               | API keys          |
+| `cookie` | `Cookie: <name>=<value>`        | Session cookies   |
+
 ## API
 
 ### `renderTrpcStudio(router, options)`
@@ -256,16 +376,30 @@ Returns a self-contained HTML string.
 ```typescript
 interface RenderOptions {
   url: string; // Base tRPC URL
-  outputSchemas?: Record<string, JsonSchema>; // From CLI extractor
+  outputSchemas?: Record<string, JsonSchema>; // From CLI: schemas.outputs
+  inputSchemas?: Record<string, JsonSchema>; // From CLI: schemas.inputs (fallback for z.custom())
   transformer?: "superjson" | "none"; // Default: "none"
+  auth?: AuthConfig | AuthConfig[]; // Authentication config for "Authorize" button
   meta?: {
     title?: string;
     description?: string;
     version?: string;
   };
-  headers?: Record<string, string>; // Auth headers for "Try It Out"
+  headers?: Record<string, string>; // Default headers for all requests
+}
+
+interface AuthConfig {
+  type: "bearer" | "cookie" | "header" | "basic";
+  name?: string; // Required for "cookie" and "header" types
+  description?: string; // Shown in the Authorize modal
 }
 ```
+
+**How input schema merging works:** Zod runtime schemas are the primary source.
+When a field produces an empty schema (e.g., `z.custom<T>()`), the CLI-extracted
+schema is used as a fallback. This gives you the best of both worlds — real Zod
+validation metadata where available, with TypeScript type info for `z.custom()`
+fields.
 
 ## Supported Zod Types
 

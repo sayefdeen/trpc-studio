@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { extractRouterOutputSchemas } from "@trpc-studio/core";
+import { extractRouterSchemas } from "@trpc-studio/core";
 
 function printUsage() {
   console.error(`
@@ -68,18 +68,21 @@ function main() {
   console.error(`Router variable: ${routerName}`);
 
   try {
-    const schemas = extractRouterOutputSchemas({
+    const schemas = extractRouterSchemas({
       routerPath,
       routerName,
       tsconfigPath,
     });
 
-    const procedureCount = Object.keys(schemas).length;
+    const inputCount = Object.keys(schemas.inputs).length;
+    const outputCount = Object.keys(schemas.outputs).length;
     const json = JSON.stringify(schemas, null, 2);
 
     fs.writeFileSync(outputPath, json, "utf-8");
 
-    console.error(`\nExtracted ${String(procedureCount)} procedure output schemas`);
+    console.error(
+      `\nExtracted ${String(inputCount)} input schemas, ${String(outputCount)} output schemas`,
+    );
     console.error(`Written to: ${outputPath}`);
   } catch (err) {
     console.error(`\nError: ${err instanceof Error ? err.message : String(err)}`);

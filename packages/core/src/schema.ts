@@ -22,6 +22,7 @@ export interface ProcedureInfo {
   inputSchema: JsonSchema | null;
   outputSchema: JsonSchema | null;
   description?: string;
+  meta?: Record<string, unknown>;
 }
 
 export interface RouterManifest {

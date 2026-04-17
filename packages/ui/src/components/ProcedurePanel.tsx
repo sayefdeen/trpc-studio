@@ -67,6 +67,31 @@ export function ProcedurePanel({ procedure, baseUrl, transformer, headers }: Pro
         )}
       </div>
 
+      {/* Meta */}
+      {procedure.meta && Object.keys(procedure.meta).length > 0 && (
+        <div className="px-4 pt-3 pb-1 border-b border-gray-100">
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(procedure.meta).map(([key, value]) => {
+              if (key === "description") return null;
+              const display = typeof value === "boolean" ? key : `${key}: ${String(value)}`;
+              const isWarning = key === "deprecated" && value === true;
+              return (
+                <span
+                  key={key}
+                  className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
+                    isWarning ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {key === "auth" && value === true && "🔒 "}
+                  {isWarning && "⚠️ "}
+                  {display}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Parameters / Try It Out */}
       <div className="p-4">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Parameters</h3>

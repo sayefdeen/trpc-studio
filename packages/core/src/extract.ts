@@ -154,7 +154,12 @@ function isRouterDef(defType: Type): boolean {
   return recordType.getProperties().length > 0 && !recordType.isBoolean();
 }
 
-export function extractRouterOutputSchemas(options: ExtractOptions): Record<string, JsonSchema> {
+export interface ExtractedSchemas {
+  inputs: Record<string, JsonSchema>;
+  outputs: Record<string, JsonSchema>;
+}
+
+export function extractRouterSchemas(options: ExtractOptions): ExtractedSchemas {
   const projectOptions: ConstructorParameters<typeof Project>[0] = {
     skipAddingFilesFromTsConfig: false,
   };
@@ -174,11 +179,16 @@ export function extractRouterOutputSchemas(options: ExtractOptions): Record<stri
   }
 
   const routerType = routerVar.getType();
-  const result: Record<string, JsonSchema> = {};
+  const result: SchemaResult = { inputs: {}, outputs: {} };
 
   walkRouterType(routerType, "", result);
 
   return result;
+}
+
+/** @deprecated Use extractRouterSchemas instead — returns both inputs and outputs */
+export function extractRouterOutputSchemas(options: ExtractOptions): Record<string, JsonSchema> {
+  return extractRouterSchemas(options).outputs;
 }
 
 function extractProcedureOutputType(propDefType: Type): Type | null {
@@ -190,6 +200,20 @@ function extractProcedureOutputType(propDefType: Type): Type | null {
   const $types = getPropertyType(propDefType, "$types");
   if ($types) {
     return getPropertyType($types, "output");
+  }
+
+  return null;
+}
+
+function extractProcedureInputType(propDefType: Type): Type | null {
+  // v10: _def._input_in
+  const v10Input = getPropertyType(propDefType, "_input_in");
+  if (v10Input) return v10Input;
+
+  // v11: _def.$types.input
+  const $types = getPropertyType(propDefType, "$types");
+  if ($types) {
+    return getPropertyType($types, "input");
   }
 
   return null;
@@ -207,11 +231,12 @@ function isProcedureType(type: Type): boolean {
   );
 }
 
-function walkRecordEntries(
-  recordType: Type,
-  prefix: string,
-  result: Record<string, JsonSchema>,
-): void {
+interface SchemaResult {
+  inputs: Record<string, JsonSchema>;
+  outputs: Record<string, JsonSchema>;
+}
+
+function walkRecordEntries(recordType: Type, prefix: string, result: SchemaResult): void {
   for (const prop of recordType.getProperties()) {
     const propName = prop.getName();
     const path = prefix ? `${prefix}.${propName}` : propName;
@@ -227,11 +252,15 @@ function walkRecordEntries(
       continue;
     }
 
-    // Check if this is a procedure (has _def with output type info)
+    // Check if this is a procedure (has _def with type info)
     if (propDefType) {
       const outputType = extractProcedureOutputType(propDefType);
       if (outputType) {
-        result[path] = typeToJsonSchema(outputType);
+        result.outputs[path] = typeToJsonSchema(outputType);
+      }
+      const inputType = extractProcedureInputType(propDefType);
+      if (inputType && !inputType.isVoid() && !inputType.isUndefined()) {
+        result.inputs[path] = typeToJsonSchema(inputType);
       }
       continue;
     }
@@ -245,7 +274,6 @@ function walkRecordEntries(
       if (firstDecl) {
         const firstChildType = firstChild.getTypeAtLocation(firstDecl);
         if (isProcedureType(firstChildType)) {
-          // This is a v11 namespace — recurse into its properties
           walkRecordEntries(propType, path, result);
           continue;
         }
@@ -254,7 +282,7 @@ function walkRecordEntries(
   }
 }
 
-function walkRouterType(type: Type, prefix: string, result: Record<string, JsonSchema>): void {
+function walkRouterType(type: Type, prefix: string, result: SchemaResult): void {
   // Get _def.record
   const defType = getPropertyType(type, "_def");
   if (!defType) return;

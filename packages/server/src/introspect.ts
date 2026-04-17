@@ -67,8 +67,12 @@ function extractProcedureFromDef(def: any, path: string, procedures: ProcedureIn
   const outputZod = def.output;
   const outputSchema = isZodType(outputZod) ? zodInputToJsonSchema(outputZod) : null;
 
-  // Extract description from meta
-  const description = def.meta?.description as string | undefined;
+  // Extract meta object
+  const meta =
+    def.meta !== null && def.meta !== undefined && typeof def.meta === "object"
+      ? (def.meta as Record<string, unknown>)
+      : undefined;
+  const description = meta?.description as string | undefined;
 
   procedures.push({
     path,
@@ -76,6 +80,7 @@ function extractProcedureFromDef(def: any, path: string, procedures: ProcedureIn
     inputSchema,
     outputSchema,
     ...(description !== undefined ? { description } : {}),
+    ...(meta !== undefined ? { meta } : {}),
   });
 }
 
